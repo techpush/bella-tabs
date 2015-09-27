@@ -3,19 +3,19 @@
   "name": "__MSG_name__",
   "description": "__MSG_description__",
   "author": "@ndaidong",
-  "version": "0.2.1",
+  "version": "0.3.1",
   "default_locale": "en",
-  "homepage_url": "http://techpush.net/",
- 
+  "homepage_url": "http://techpush.net",
+
   "icons": {
-	"16":"icon-16.png", 
-	"24":"icon-24.png", 
-	"32":"icon-32.png",
-	"48":"icon-48.png",
-	"64":"icon-64.png",
-	"128":"icon-128.png"
-  }, 
-   
+    "16":"icon-16.png",
+    "24":"icon-24.png",
+    "32":"icon-32.png",
+    "48":"icon-48.png",
+    "64":"icon-64.png",
+    "128":"icon-128.png"
+  },
+
   "background": {
     "scripts": ["background.js"],
     "persistent": false
@@ -23,25 +23,27 @@
 
   "content_scripts": [{
       "all_frames": true,
-      "js": ["/js/libs/avim.js"],
+      "js": [
+        "/js/packages/avim.min.js"
+      ],
       "matches": [ "http://*/*", "https://*/*" ],
       "run_at": "document_idle"
   }],
-   
+
  "offline_enabled": true,
- 
+
  "permissions": [
-	"tabs",
-	"alarms",
-	"webNavigation",
-	"notifications",
-	"storage",
+  "tabs",
+  "alarms",
+  "webNavigation",
+  "notifications",
+  "storage",
     "unlimitedStorage",
     "geolocation",
     "management"
   ],
-  
+
   "chrome_url_overrides": {
-	"newtab": "blank.html"
+    "newtab": "blank.html"
   }
 }
