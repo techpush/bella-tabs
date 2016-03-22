@@ -24,7 +24,7 @@
   "content_scripts": [{
       "all_frames": true,
       "js": [
-        "/js/packages/avim.min.js"
+        "/js/vendor/avim.js"
       ],
       "matches": [ "http://*/*", "https://*/*" ],
       "run_at": "document_idle"

@@ -4,14 +4,14 @@
  */
 
 /* global chrome */
-
+/* eslint no-console: 0*/
 
 // events
-function onInstall(){
+function onInstall() {
 
 }
 
-function onUpdate(old){
+function onUpdate(old) {
   console.log(old);
 }
 
@@ -20,35 +20,32 @@ var prefs = {
   'onOff': 1,
   'ckSpell': 0,
   'oldAccent': 1
-}
+};
 
-function updateAllTabs(){
-  chrome.tabs.getAllInWindow(null, function(tabs){
-    tabs.forEach(function(tab){
+function updateAllTabs() {
+  chrome.tabs.getAllInWindow(null, function eachTab(tabs) {
+    tabs.forEach(function updateOne(tab) {
       chrome.tabs.sendMessage(tab.id, prefs);
     });
   });
 }
 
 // set listeners
-chrome.runtime.onInstalled.addListener(function(details){
-  if(details.reason === 'install'){
+chrome.runtime.onInstalled.addListener(function eachTab(details) {
+  if (details.reason === 'install') {
     onInstall();
-  }
-  else if(details.reason === 'update'){
+  } else if (details.reason === 'update') {
     onUpdate(details.previousVersion);
   }
 });
 
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
-  var cb = sendResponse || function(){};
-  if(request.action === 'init'){
-
-  }
-  else if(request.action === 'configAVIM'){
+chrome.runtime.onMessage.addListener(function onMsg(request, sender, sendResponse) {
+  var cb = sendResponse || function fn() {};
+  if (request.action === 'configAVIM') {
     updateAllTabs();
     return cb(prefs);
   }
+  return false;
 });
 
 /*
