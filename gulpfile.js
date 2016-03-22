@@ -19,6 +19,7 @@ var gulp = require('gulp');
 var bella = require('bellajs');
 
 var fs = require('fs');
+
 var mkdirp = require('mkdirp').sync;
 
 var fixPath = (p) => {
@@ -39,8 +40,33 @@ var verDir = 'v' + pkg.version;
 
 gulp.task('dir', () => {
   builder.createDir([ distDir, js3rdDir, css3rdDir ]);
-  builder.removeDir(distDir + verDir);
-  builder.createDir(distDir + verDir);
+});
+
+gulp.task('prepare', () => {
+  let dir = distDir + verDir;
+  builder.removeDir(dir);
+  builder.createDir(dir);
+  builder.createDir(dir + '/src');
+});
+
+gulp.task('move', () => {
+  let dir = fixPath(distDir + verDir);
+  let copyFile = builder.copyFile;
+  fs.readdir('src/', (err, files) => {
+    if (err) {
+      console.trace(err);
+    }
+    if (files && files.length) {
+      files.forEach((o) => {
+        let f = 'src/' + o;
+        let stat = fs.statSync(f);
+        if (stat.isFile()) {
+          copyFile(f, dir + f);
+        }
+      });
+    }
+    return false;
+  });
 });
 
 gulp.task('download', () => {
@@ -79,6 +105,5 @@ gulp.task('download', () => {
   }
 });
 
-gulp.task('build', [ 'dir', 'download' ], () => {
-  console.log('All Gulp tasks have been executed.');
-});
+gulp.task('setup', [ 'dir', 'download' ]);
+gulp.task('build', [ 'prepare', 'move' ]);

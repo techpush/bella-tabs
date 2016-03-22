@@ -85,7 +85,7 @@
   App.detectLocation = function _detectLocation() {
     return new Promise(function _getCP(resolve, reject) {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
+        enableHighAccuracy: false,
         timeout: 6e4
       });
     });

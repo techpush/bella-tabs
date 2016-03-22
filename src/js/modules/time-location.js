@@ -4,7 +4,7 @@
  * @ndaidong
  */
 
-/* global bella Ractive fetchival */
+/* global Bella Ractive fetchival */
 /* eslint no-console: 0 */
 
 (function _init() {
@@ -14,7 +14,7 @@
 
   function onchange() {
     for (var k in data) {
-      if (bella.hasProperty(data, k)) {
+      if (Bella.hasProperty(data, k)) {
         vm.set(k, data[k]);
       }
     }
@@ -112,7 +112,8 @@
       }
 
       return fetchival('http://api.openweathermap.org/data/2.5/weather').get({
-        q: city
+        q: city,
+        appid: App.get('OWMKey')
       }).then(function _then(result) {
         if (result && result.weather) {
           var w = result.weather[0];
