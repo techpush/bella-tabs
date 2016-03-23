@@ -14,6 +14,10 @@ traceur.require.makeDefault((filename) => {
 
 var pkg = require('./package');
 var builder = require('./workers/builder');
+var createDir = builder.createDir;
+var removeDir = builder.removeDir;
+var copyDir = builder.copyDir;
+var copyFile = builder.copyFile;
 
 var gulp = require('gulp');
 var bella = require('bellajs');
@@ -42,16 +46,29 @@ gulp.task('dir', () => {
   builder.createDir([ distDir, js3rdDir, css3rdDir ]);
 });
 
+gulp.task('reset', () => {
+  removeDir([ distDir, js3rdDir, css3rdDir ]);
+});
+
 gulp.task('prepare', () => {
   let dir = distDir + verDir;
-  builder.removeDir(dir);
-  builder.createDir(dir);
-  builder.createDir(dir + '/src');
+  removeDir(dir);
+  createDir(dir);
+  createDir(dir + '/src');
+
+  copyDir('src/_locales', dir + '/src/_locales');
+  copyDir('src/images', dir + '/src/images');
+  copyDir('src/templates', dir + '/src/templates');
+
+});
+
+gulp.task('merge', () => {
+  let dir = distDir + verDir;
+  builder.compileHTML('src/blank.html', dir + 'src/blank.html');
 });
 
 gulp.task('move', () => {
   let dir = fixPath(distDir + verDir);
-  let copyFile = builder.copyFile;
   fs.readdir('src/', (err, files) => {
     if (err) {
       console.trace(err);
@@ -106,4 +123,4 @@ gulp.task('download', () => {
 });
 
 gulp.task('setup', [ 'dir', 'download' ]);
-gulp.task('build', [ 'prepare', 'move' ]);
+gulp.task('build', [ 'prepare', 'move', 'merge' ]);

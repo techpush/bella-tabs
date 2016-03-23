@@ -19,6 +19,8 @@ var readdir = require('recursive-readdir');
 var UglifyJS = require('uglify-js');
 var SVGO = require('svgo');
 
+var cheerio = require('cheerio');
+
 var fixPath = (p) => {
   if (!p) {
     return '';
@@ -105,7 +107,7 @@ export var copyFile = (source, target) => {
   });
 };
 
-export var publish = (from, to) => {
+export var copyDir = (from, to) => {
   if (!fs.existsSync(from)) {
     return false;
   }
@@ -115,6 +117,29 @@ export var publish = (from, to) => {
   mkdirp(to);
   cpdir(from, to);
   return false;
+};
+
+export var compileHTML = (file) => {
+  if (fs.existsSync(file)) {
+    let s = fs.readFileSync(file, 'utf8');
+    let $ = cheerio.load(s, {
+      normalizeWhitespace: true,
+      xmlMode: true
+    });
+    let cssFiles = [];
+    $('link[rel="stylesheet"]').each((i, elem) => {
+      cssFiles.push($(elem).attr('href'));
+    });
+    console.log(cssFiles);
+    $('link[rel="stylesheet"]').remove();
+    let jsFiles = [];
+    $('script').each((i, elem) => {
+      jsFiles.push($(elem).attr('src'));
+    });
+    console.log(jsFiles);
+    $('script').remove();
+    console.log($.html());
+  }
 };
 
 export var minify = () => {
@@ -149,20 +174,20 @@ export var minify = () => {
 };
 
 export var img = () => {
-  publish(imgDir, distDir + '/images/');
+  copyDir(imgDir, distDir + '/images/');
 };
 
 export var font = () => {
-  publish(fontDir, distDir + '/fonts/');
+  copyDir(fontDir, distDir + '/fonts/');
 };
 
 export var auth = () => {
-  publish(authDir, distDir + '/auth/');
+  copyDir(authDir, distDir + '/auth/');
 };
 
 
 export var tpl = () => {
-  publish(tplDir, distDir + '/templates/');
+  copyDir(tplDir, distDir + '/templates/');
 };
 
 export var reset = () => {
