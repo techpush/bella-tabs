@@ -54,17 +54,12 @@ gulp.task('prepare', () => {
   let dir = distDir + verDir;
   removeDir(dir);
   createDir(dir);
-  createDir(dir + '/src');
+  createDir(dir + '/js/vendor');
 
-  copyDir('src/_locales', dir + '/src/_locales');
-  copyDir('src/images', dir + '/src/images');
-  copyDir('src/templates', dir + '/src/templates');
-
-});
-
-gulp.task('merge', () => {
-  let dir = distDir + verDir;
-  builder.compileHTML('src/blank.html', dir + 'src/blank.html');
+  copyDir('src/_locales', dir + '/_locales');
+  copyDir('src/images', dir + '/images');
+  copyDir('src/templates', dir + '/templates');
+  copyDir('src/js/vendor', dir + '/js/vendor');
 });
 
 gulp.task('move', () => {
@@ -78,11 +73,34 @@ gulp.task('move', () => {
         let f = 'src/' + o;
         let stat = fs.statSync(f);
         if (stat.isFile()) {
-          copyFile(f, dir + f);
+          copyFile(f, dir + o);
         }
       });
     }
     return false;
+  });
+});
+
+
+gulp.task('merge', () => {
+  let dir = distDir + verDir;
+
+  builder.compileHTML('src/blank.html').then((result) => {
+    if (result.css) {
+      let dcss = dir + '/css';
+      createDir(dcss);
+      fs.writeFileSync(dcss + '/all.min.css', result.css, 'utf8');
+    }
+    if (result.js) {
+      let djs = dir + '/js';
+      createDir(djs);
+      fs.writeFileSync(djs + '/all.min.js', result.js, 'utf8');
+    }
+    if (result.html) {
+      let output = dir + '/blank.html';
+      fs.unlinkSync(output);
+      fs.writeFileSync(output, result.html, 'utf8');
+    }
   });
 });
 
@@ -123,4 +141,4 @@ gulp.task('download', () => {
 });
 
 gulp.task('setup', [ 'dir', 'download' ]);
-gulp.task('build', [ 'prepare', 'move', 'merge' ]);
+gulp.task('build', [ 'setup', 'prepare', 'move', 'merge' ]);

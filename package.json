@@ -20,20 +20,17 @@
   },
   "devDependencies": {
     "async": "latest",
-    "autoprefixer": "latest",
     "bellajs": "latest",
     "bluebird": "latest",
     "cheerio": "latest",
     "copy-dir": "latest",
     "coveralls": "latest",
     "cssnano": "latest",
-    "postcss-cssnext": "latest",
+    "easy-zip": "latest",
     "gulp": "latest",
-    "html-minifier": "latest",
     "mkdirp": "latest",
     "nyc": "latest",
     "postcss": "latest",
-    "recursive-readdir": "latest",
     "svgo": "latest",
     "tap-spec": "latest",
     "tape": "latest",
@@ -58,10 +55,6 @@
     "test": "test"
   },
   "builder": {
-    "directories": [
-      "storage/cache",
-      "storage/tmp"
-    ],
     "cssDir": "src/css",
     "jsDir": "src/js",
     "imgDir": "src/images",

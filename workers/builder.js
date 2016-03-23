@@ -11,34 +11,24 @@ var path = require('path');
 var exec = require('child_process').execSync;
 
 var traceur = require('traceur/src/node/api.js');
+
+var async = require('async');
+var Promise = require('bluebird');
 var bella = require('bellajs');
 var mkdirp = require('mkdirp').sync;
 var cpdir = require('copy-dir').sync;
-var readdir = require('recursive-readdir');
 
 var UglifyJS = require('uglify-js');
-var SVGO = require('svgo');
+
+var postcss = require('postcss');
+var cssnano = require('cssnano');
 
 var cheerio = require('cheerio');
 
-var fixPath = (p) => {
-  if (!p) {
-    return '';
-  }
-  if (p.endsWith('/')) {
-    return p;
-  }
-  return p + '/';
+var removeNewLines = (s) => {
+  s = s.replace(/(?:\r\n|\r|\n)+/gm, '');
+  return s;
 };
-
-var pkg = require('../package');
-var bconf = pkg.builder || {},
-  jsDir = fixPath(bconf.jsDir),
-  imgDir = fixPath(bconf.imgDir),
-  authDir = fixPath(bconf.authDir),
-  fontDir = fixPath(bconf.fontDir),
-  distDir = fixPath(bconf.distDir),
-  tplDir = fixPath(bconf.tplDir);
 
 export var download = (src, saveas) => {
   if (fs.existsSync(saveas)) {
@@ -98,6 +88,9 @@ export var createEmptyFile = (dest) => {
 
 export var copyFile = (source, target) => {
   return new Promise((resolve, reject) => {
+    if (fs.existsSync(target)) {
+      fs.unlinkSync(target);
+    }
     var rd = fs.createReadStream(source);
     rd.on('error', reject);
     var wr = fs.createWriteStream(target);
@@ -119,202 +112,155 @@ export var copyDir = (from, to) => {
   return false;
 };
 
-export var compileHTML = (file) => {
-  if (fs.existsSync(file)) {
-    let s = fs.readFileSync(file, 'utf8');
-    let $ = cheerio.load(s, {
-      normalizeWhitespace: true,
-      xmlMode: true
-    });
-    let cssFiles = [];
-    $('link[rel="stylesheet"]').each((i, elem) => {
-      cssFiles.push($(elem).attr('href'));
-    });
-    console.log(cssFiles);
-    $('link[rel="stylesheet"]').remove();
-    let jsFiles = [];
-    $('script').each((i, elem) => {
-      jsFiles.push($(elem).attr('src'));
-    });
-    console.log(jsFiles);
-    $('script').remove();
-    console.log($.html());
-  }
-};
+var postProcess = (css) => {
+  let plugins = [
+    cssnano
+  ];
 
-export var minify = () => {
-  let dir = jsDir + '/packages/';
-  let files = bconf.files || {};
-  if (bella.isObject(files)) {
-    let destDir = dir;
-    let rd = fixPath(destDir);
-    let missed = [];
-    for (let alias in files) {
-      let dest = rd + alias + '.js';
-      let min = rd + alias + '.min.js';
-      if (fs.existsSync(dest) && !fs.existsSync(min)) {
-        let s = fs.readFileSync(dest, 'utf8');
-        if (s && s.length > 0) {
-          let minified = UglifyJS.minify(s, {
-            fromString: true
-          });
-          fs.writeFileSync(min, minified.code, 'utf8');
-          console.log('Minified: %s', dest);
-        } else {
-          fs.unlinkSync(dest);
-          missed.push(dest);
-        }
-      }
-    }
-    if (missed.length > 0) {
-      console.log('Missing the following files:');
-      console.log(missed);
-    }
-  }
-};
-
-export var img = () => {
-  copyDir(imgDir, distDir + '/images/');
-};
-
-export var font = () => {
-  copyDir(fontDir, distDir + '/fonts/');
-};
-
-export var auth = () => {
-  copyDir(authDir, distDir + '/auth/');
-};
-
-
-export var tpl = () => {
-  copyDir(tplDir, distDir + '/templates/');
-};
-
-export var reset = () => {
-  removeDir(distDir);
-  removeDir(jsDir + '/packages/');
-};
-
-export var svg = () => {
-  let svgo = new SVGO();
-  let minsvg = (file) => {
-    let s = fs.readFileSync(file, 'utf8');
-    svgo.optimize(s, (result) => {
-      let ss = result.data;
-      fs.writeFileSync(file, ss, 'utf8');
-    });
-  };
-
-  readdir(distDir + 'images/', [ '*.png', '*.jpg', '*.gif', '.ico' ], (err, files) => {
-    if (err) {
-      console.trace(err);
-    }
-    if (files && files.length) {
-      files.forEach((f) => {
-        let b = path.extname(f);
-        if (b === '.svg') {
-          minsvg(f);
-        }
+  return new Promise((resolve, reject) => {
+    return postcss(plugins)
+      .process(css)
+      .then((result) => {
+        return resolve(result.css);
+      }).catch((err) => {
+        return reject(err);
       });
-    }
-    return false;
   });
 };
 
-export var packages = () => {
-  let files = bconf.javascript || {};
-  if (bella.isObject(files)) {
-    let destDir = jsDir + 'packages/';
-    let rd = fixPath(destDir);
-    if (!fs.existsSync(rd)) {
-      mkdirp(rd);
+var compileCSS = (files) => {
+
+  return new Promise((resolve, reject) => {
+    let s = '', as = [], vs = [];
+    if (bella.isString(files)) {
+      files = [ files ];
     }
-    for (let alias in files) {
-      let src = files[alias];
-      let dest = rd + alias + '.js';
-      if (!fs.existsSync(dest)) {
-        download(src, dest);
-      }
-    }
-  }
-};
 
-export var reconf = () => {
-  let saveas = jsDir + '/packages/reconf.js';
-  let dirs = bconf.directories || [];
-  if (bella.isArray(dirs) && dirs.length) {
-    dirs.map((d) => {
-      if (!fs.existsSync(d)) {
-        mkdirp(d);
-      }
-    });
-  }
-
-  let c = {
-    urlArgs: 'rev=' + bella.id,
-    baseUrl: '/js/',
-    paths: {}
-  };
-
-  let paths = {};
-  let files = bconf.files || {};
-  if (bella.isObject(files)) {
-    let destDir = jsDir + 'packages/';
-    let rd = fixPath(destDir);
-    for (let alias in files) {
-      let dest = rd + alias + '.min.js';
-      if (!fs.existsSync(dest)) {
-        dest = rd + alias + '.js';
-      }
-      if (fs.existsSync(dest)) {
-        let b = path.extname(dest);
-        if (b === '.js') {
-          let a = path.basename(dest, b);
-          paths[alias] = 'packages/' + a;
+    files.forEach((file) => {
+      if (fs.existsSync(file)) {
+        let x = fs.readFileSync(file, 'utf8');
+        if (!file.includes('/vendor')) {
+          as.push(x);
+        } else {
+          vs.push(x);
         }
       }
+    });
+
+    s = as.join('\n');
+
+    if (s.length > 0) {
+      let ps = vs.join('\n');
+      return postProcess(s).then((rs) => {
+        return resolve(ps + rs);
+      }).catch((err) => {
+        return reject(err);
+      });
     }
-  }
-  let collect = (folder, to) => {
-    let dir = jsDir + folder;
-    if (!fs.existsSync(dir)) {
-      createDir(dir);
-      return false;
+    return reject(new Error('No CSS data'));
+  });
+};
+
+var compileJS = (files) => {
+
+  return new Promise((resolve, reject) => {
+    let s = '', as = [];
+    if (bella.isString(files)) {
+      files = [ files ];
     }
-    fs.readdirSync(dir).forEach((f) => {
-      let bx = path.extname(f);
-      if (bx === '.js') {
-        let ax = path.basename(f, bx);
-        to[ax] = folder + '/' + ax;
+
+    files.forEach((file) => {
+      if (fs.existsSync(file)) {
+        let x = fs.readFileSync(file, 'utf8');
+        if (!file.includes('/vendor')) {
+          x = traceur.compile(x);
+        }
+        as.push(x);
       }
     });
-    return false;
-  };
 
-  collect('modules', paths);
-  c.paths = paths;
-  fs.writeFileSync(saveas, ';var RECONF=' + JSON.stringify(c) + ';');
-  console.log('Packages are ready to use.');
-};
+    s = as.join('\n');
 
-export var transpile = (req, res, next) => {
-  if (/\.*\/modules\/[A-Za-z0-9-_]+\.js/.test(req.url)) {
-    let f = 'assets' + req.url;
-    if (fs.existsSync(f)) {
-      let s = fs.readFileSync(f);
-      let c = traceur.compile(s);
-      res.setHeader('content-type', 'text/javascript');
-      res.status(200).send(c);
+    if (s.length > 0) {
+      let minified = UglifyJS.minify(s, {
+        fromString: true
+      });
+      return resolve(minified.code);
     }
-  }
-  next();
+    return reject(new Error('No JavaScript data'));
+  });
 };
 
-export var dir = () => {
-  let dirs = bconf.directories || [];
-  dirs = dirs.concat([
-    distDir + '/js',
-    distDir + '/css'
-  ]);
-  createDir(dirs);
+export var compileHTML = (file) => {
+
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(file)) {
+      return reject(new Error('File not found'));
+    }
+
+    let s = fs.readFileSync(file, 'utf8');
+    let $ = cheerio.load(s, {
+      normalizeWhitespace: true
+    });
+    let cssFiles = [];
+    let jsFiles = [];
+
+    let html = '';
+    let style = '';
+    let script = '';
+
+    let revision = bella.createId(10);
+
+    return async.series([
+      (next) => {
+        $('link[rel="stylesheet"]').each((i, elem) => {
+          let ofile = $(elem).attr('href');
+          cssFiles.push('./src' + ofile);
+        });
+        $('link[rel="stylesheet"]').remove();
+        return next();
+      },
+      (next) => {
+        $('script').each((i, elem) => {
+          let ofile = $(elem).attr('src');
+          jsFiles.push('./src' + ofile);
+        });
+        $('script').remove();
+        return next();
+      },
+      (next) => {
+        return compileCSS(cssFiles).then((css) => {
+          style = css;
+          let styleTag = `<link rel="stylesheet" type="text/css" href="/css/all.min.css?rev=${revision}" />`;
+          $('head').append(styleTag);
+          return css;
+        }).finally(next);
+      },
+      (next) => {
+        return compileJS(jsFiles).then((js) => {
+          script = js;
+          let scriptTag = `<script type="text/javascript" src="/js/all.min.js?rev=${revision}"></script>`;
+          $('body').append(scriptTag);
+          return js;
+        }).finally(next);
+      },
+      (next) => {
+        html = $.html();
+        html = removeNewLines(html);
+        html = html.replace(/\s+/gm, ' ');
+        html = html.replace(/>\s+</gm, '><');
+        return next();
+      }
+    ], (err) => {
+      if (err) {
+        return reject(err);
+      }
+
+      return resolve({
+        html: html,
+        css: style,
+        js: script
+      });
+    });
+  });
 };
