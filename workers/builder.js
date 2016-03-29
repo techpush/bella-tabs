@@ -18,12 +18,27 @@ var bella = require('bellajs');
 var mkdirp = require('mkdirp').sync;
 var cpdir = require('copy-dir').sync;
 
+var cheerio = require('cheerio');
+
 var UglifyJS = require('uglify-js');
 
 var postcss = require('postcss');
+var postcssFilter = require('postcss-filter-plugins');
 var cssnano = require('cssnano');
+var cssnext = require('postcss-cssnext');
+var postcssMixin = require('postcss-mixins');
+var postcssNested = require('postcss-nested');
 
-var cheerio = require('cheerio');
+const POSTCSS_PLUGINS = [
+  postcssFilter({
+    silent: true
+  }),
+  cssnext,
+  cssnano,
+  postcssMixin,
+  postcssNested
+];
+
 
 var removeNewLines = (s) => {
   s = s.replace(/(?:\r\n|\r|\n)+/gm, '');
@@ -113,12 +128,8 @@ export var copyDir = (from, to) => {
 };
 
 var postProcess = (css) => {
-  let plugins = [
-    cssnano
-  ];
-
   return new Promise((resolve, reject) => {
-    return postcss(plugins)
+    return postcss(POSTCSS_PLUGINS)
       .process(css)
       .then((result) => {
         return resolve(result.css);
