@@ -1,11 +1,11 @@
 {
   "version": "0.4.1",
   "name": "bella-tabs",
-  "description": "Extract clean article data from given URL.",
+  "description": "Awesome tab for Chrome",
   "homepage": "http://techpush.net",
   "repository": {
     "type": "git",
-    "url": "git@github.com:ndaidong/article-parser.git"
+    "url": "git@github.com:techpush/bella-tabs.git"
   },
   "author": "Dong Nguyen <ndaidong@gmail.com> (https://twitter.com/ndaidong)",
   "main": "./index.js",
@@ -26,7 +26,6 @@
     "copy-dir": "latest",
     "coveralls": "latest",
     "cssnano": "latest",
-    "easy-zip": "latest",
     "gulp": "latest",
     "mkdirp": "latest",
     "nyc": "latest",
